@@ -4,16 +4,12 @@
 * No delay + delay + delay w/ max_delay
 """
 import asyncio
-from time import sleep
-from time import time
+from time import sleep, time
 from uuid import uuid4
 
 import pytest
 
-from pyrate_limiter import BucketFullException
-from pyrate_limiter import Duration
-from pyrate_limiter import Limiter
-from pyrate_limiter import RequestRate
+from pyrate_limiter import BucketFullException, Duration, Limiter, RequestRate
 
 
 def test_ratelimit__synchronous(time_function):

@@ -3,9 +3,7 @@ from hashlib import sha1
 from pathlib import Path
 from tempfile import gettempdir
 from threading import RLock
-from typing import List
-from typing import Optional
-from typing import Union
+from typing import List, Optional, Union
 
 from .bucket import AbstractBucket
 

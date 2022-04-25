@@ -1,21 +1,21 @@
 """Multithreaded and multiprocess stress tests"""
-from concurrent.futures import ProcessPoolExecutor
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from functools import partial
 from logging import getLogger
 from multiprocessing import Process
 from os.path import join
 from tempfile import gettempdir
-from time import perf_counter
-from time import sleep
+from time import perf_counter, sleep
 
 import pytest
 
-from pyrate_limiter import Duration
-from pyrate_limiter import FileLockSQLiteBucket
-from pyrate_limiter import Limiter
-from pyrate_limiter import RequestRate
-from pyrate_limiter import SQLiteBucket
+from pyrate_limiter import (
+    Duration,
+    FileLockSQLiteBucket,
+    Limiter,
+    RequestRate,
+    SQLiteBucket,
+)
 
 N_BUCKETS = 5  # Number of buckets to use
 N_REQUESTS = 101  # Total number of requests to make

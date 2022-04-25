@@ -1,15 +1,8 @@
 from time import monotonic
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import Type
-from typing import Union
+from typing import Any, Callable, Dict, Type
 
-from .bucket import AbstractBucket
-from .bucket import MemoryQueueBucket
-from .exceptions import BucketFullException
-from .exceptions import InvalidParams
-from .limit_context_decorator import LimitContextDecorator
+from .bucket import RedisBucket
+from .exceptions import BucketFullException, InvalidParams
 from .request_rate import RequestRate
 
 
@@ -27,7 +20,7 @@ class Limiter:
     def __init__(
         self,
         *rates: RequestRate,
-        bucket_class: Type[AbstractBucket] = MemoryQueueBucket,
+        bucket_class: Type[RedisBucket] = RedisBucket,
         bucket_kwargs: Dict[str, Any] = None,
         time_function: Callable[[], float] = None,
     ):
@@ -35,7 +28,7 @@ class Limiter:
         self._rates = rates
         self._bkclass = bucket_class
         self._bucket_args = bucket_kwargs or {}
-        self.bucket_group: Dict[str, AbstractBucket] = {}
+        self.bucket_group: Dict[str, RedisBucket] = {}
         self.time_function = monotonic
         if time_function is not None:
             self.time_function = time_function
@@ -54,7 +47,7 @@ class Limiter:
                 msg = f"{prev_rate} cannot come before {rate}"
                 raise InvalidParams(msg)
 
-    def _init_buckets(self, identities) -> None:
+    async def _init_buckets(self, identities) -> None:
         """Initialize a bucket for each identity, if needed.
         The bucket's maxsize equals the max limit of request-rates.
         """
@@ -68,12 +61,12 @@ class Limiter:
                 )
             self.bucket_group[item_id].lock_acquire()
 
-    def _release_buckets(self, identities) -> None:
+    async def _release_buckets(self, identities) -> None:
         """Release locks after bucket transactions, if applicable"""
         for item_id in sorted(identities):
             self.bucket_group[item_id].lock_release()
 
-    def try_acquire(self, *identities: str) -> None:
+    async def acquire(self, *client_ip: str) -> None:
         """Attempt to acquire an item, or raise an error if a rate limit has been exceeded.
 
         Args:
@@ -83,13 +76,13 @@ class Limiter:
         Raises:
             :py:exc:`BucketFullException`: If the bucket is full and the item cannot be acquired
         """
-        self._init_buckets(identities)
+        await self._init_buckets(client_ip)
         now = self.time_function()
 
         for rate in self._rates:
-            for item_id in identities:
+            for item_id in client_ip:
                 bucket = self.bucket_group[item_id]
-                volume = bucket.size()
+                volume = await bucket.size()
 
                 if volume < rate.limit:
                     continue
@@ -97,51 +90,28 @@ class Limiter:
                 # Determine rate's starting point, and check requests made during its time window
                 item_count, remaining_time = bucket.inspect_expired_items(now - rate.interval)
                 if item_count >= rate.limit:
-                    self._release_buckets(identities)
+                    await self._release_buckets(client_ip)
                     raise BucketFullException(item_id, rate, remaining_time)
 
                 # Remove expired bucket items beyond the last (maximum) rate limit,
                 if rate is self._rates[-1]:
-                    bucket.get(volume - item_count)
+                    await bucket.get(volume - item_count)
 
         # If no buckets are full, add another item to each bucket representing the next request
-        for item_id in identities:
-            self.bucket_group[item_id].put(now)
-        self._release_buckets(identities)
+        for item_id in client_ip:
+            await self.bucket_group[item_id].put(now)
+        await self._release_buckets(client_ip)
 
-    def ratelimit(
-        self,
-        *identities: str,
-        delay: bool = False,
-        max_delay: Union[int, float] = None,
-    ):
-        """A decorator and contextmanager that applies rate-limiting, with async support.
-        Depending on arguments, calls that exceed the rate limit will either raise an exception, or
-        sleep until space is available in the bucket.
-
-        Args:
-            identities: One or more identities to acquire. Typically this is the name of a service
-                or resource that is being rate-limited.
-            delay: Delay until the next request instead of raising an exception
-            max_delay: The maximum allowed delay time (in seconds); anything over this will raise
-                an exception
-
-        Raises:
-            :py:exc:`BucketFullException`: If the rate limit is reached, and ``delay=False`` or the
-                delay exceeds ``max_delay``
-        """
-        return LimitContextDecorator(self, *identities, delay=delay, max_delay=max_delay)
-
-    def get_current_volume(self, identity) -> int:
+    async def get_current_volume(self, client_ip: str) -> int:
         """Get current bucket volume for a specific identity"""
-        bucket = self.bucket_group[identity]
-        return bucket.size()
+        bucket = self.bucket_group[client_ip]
+        return await bucket.size()
 
-    def flush_all(self) -> int:
+    async def flush_all(self) -> int:
         cnt = 0
 
         for _, bucket in self.bucket_group.items():
-            bucket.flush()
+            await bucket.flush()
             cnt += 1
 
         return cnt

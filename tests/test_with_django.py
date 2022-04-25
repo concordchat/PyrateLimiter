@@ -6,11 +6,13 @@ import django_redis
 from django.conf import settings
 from fakeredis import FakeStrictRedis
 
-from pyrate_limiter import BucketFullException
-from pyrate_limiter import Duration
-from pyrate_limiter import Limiter
-from pyrate_limiter import RedisBucket
-from pyrate_limiter import RequestRate
+from pyrate_limiter import (
+    BucketFullException,
+    Duration,
+    Limiter,
+    RedisBucket,
+    RequestRate,
+)
 
 # Mocking django config
 settings.configure()

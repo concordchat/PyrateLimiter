@@ -1,9 +1,5 @@
 # pylint: disable=C0114,C0115
-from typing import Any
-from typing import Dict
-from typing import TYPE_CHECKING
-from typing import Union
-
+from typing import TYPE_CHECKING, Any, Dict, Union
 
 if TYPE_CHECKING:
     from .request_rate import RequestRate

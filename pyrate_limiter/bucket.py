@@ -1,12 +1,10 @@
 """ Implement this class to create
 a workable bucket for Limiter to use
 """
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from queue import Queue
 from threading import RLock
-from typing import List
-from typing import Tuple
+from typing import List, Tuple
 
 from .exceptions import InvalidParams
 
@@ -156,51 +154,51 @@ class RedisBucket(AbstractBucket):
         self._pool = redis_pool
         self._bucket_name = f"{bucket_name}___{identity}"
 
-    def get_connection(self):
+    async def get_connection(self):
         """Obtain a connection from redis pool"""
-        from redis import Redis  # type: ignore
+        from aioredis import Redis
 
         return Redis(connection_pool=self._pool)
 
-    def get_pipeline(self):
+    async def get_pipeline(self):
         """Using redis pipeline for batch operation"""
-        conn = self.get_connection()
+        conn = await self.get_connection()
         pipeline = conn.pipeline()
         return pipeline
 
-    def size(self) -> int:
-        conn = self.get_connection()
-        return conn.llen(self._bucket_name)
+    async def size(self) -> int:
+        conn = await self.get_connection()
+        return await conn.llen(self._bucket_name)
 
-    def put(self, item: float):
-        conn = self.get_connection()
-        current_size = conn.llen(self._bucket_name)
+    async def put(self, item: float):
+        conn = await self.get_connection()
+        current_size = await conn.llen(self._bucket_name)
 
         if current_size < self.maxsize():
-            conn.rpush(self._bucket_name, item)
+            await conn.rpush(self._bucket_name, item)
             return 1
 
         return 0
 
-    def get(self, number: int) -> int:
-        pipeline = self.get_pipeline()
+    async def get(self, number: int) -> int:
+        pipeline = await self.get_pipeline()
         counter = 0
 
         for _ in range(number):
-            pipeline.lpop(self._bucket_name)
+            await pipeline.lpop(self._bucket_name)
             counter += 1
 
-        pipeline.execute()
+        await pipeline.execute()
         return counter
 
-    def all_items(self) -> List[float]:
-        conn = self.get_connection()
-        items = conn.lrange(self._bucket_name, 0, -1)
+    async def all_items(self) -> List[float]:
+        conn = await self.get_connection()
+        items = await conn.lrange(self._bucket_name, 0, -1)
         return sorted([float(i.decode("utf-8")) for i in items])
 
-    def flush(self):
-        conn = self.get_connection()
-        conn.delete(self._bucket_name)
+    async def flush(self):
+        conn = await self.get_connection()
+        await conn.delete(self._bucket_name)
 
 
 class RedisClusterBucket(RedisBucket):

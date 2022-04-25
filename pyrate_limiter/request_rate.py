@@ -1,8 +1,7 @@
 """Initialize this class to define request-rates for limiter
 """
 from enum import Enum
-from typing import Any
-from typing import Dict
+from typing import Any, Dict
 
 from .exceptions import ImmutableClassProperty
 

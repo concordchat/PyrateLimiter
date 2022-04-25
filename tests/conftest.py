@@ -1,7 +1,6 @@
 from datetime import datetime
 from logging import basicConfig
-from time import monotonic
-from time import time
+from time import monotonic, time
 
 import pytest
 
