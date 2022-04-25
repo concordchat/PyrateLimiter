@@ -78,29 +78,30 @@ class Limiter:
         """
         await self._init_buckets(client_ip)
         now = self.time_function()
+        rate = self._rates[0]
 
-        for rate in self._rates:
-            for item_id in client_ip:
-                bucket = self.bucket_group[item_id]
-                volume = await bucket.size()
+        for item_id in client_ip:
+            bucket = self.bucket_group[item_id]
+            volume = await bucket.size()
 
-                if volume < rate.limit:
-                    continue
+            if volume < rate.limit:
+                continue
 
-                # Determine rate's starting point, and check requests made during its time window
-                item_count, remaining_time = bucket.inspect_expired_items(now - rate.interval)
-                if item_count >= rate.limit:
-                    await self._release_buckets(client_ip)
-                    raise BucketFullException(item_id, rate, remaining_time)
+            # Determine rate's starting point, and check requests made during its time window
+            item_count, remaining_time = bucket.inspect_expired_items(now - rate.interval)
+            if item_count >= rate.limit:
+                await self._release_buckets(client_ip)
+                raise BucketFullException(item_id, rate, remaining_time)
 
-                # Remove expired bucket items beyond the last (maximum) rate limit,
-                if rate is self._rates[-1]:
-                    await bucket.get(volume - item_count)
+            # Remove expired bucket items beyond the last (maximum) rate limit,
+            if rate is self._rates[-1]:
+                await bucket.get(volume - item_count)
 
         # If no buckets are full, add another item to each bucket representing the next request
         for item_id in client_ip:
             await self.bucket_group[item_id].put(now)
         await self._release_buckets(client_ip)
+        return volume
 
     async def get_current_volume(self, client_ip: str) -> int:
         """Get current bucket volume for a specific identity"""

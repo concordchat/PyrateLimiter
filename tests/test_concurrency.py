@@ -9,7 +9,7 @@ from time import perf_counter, sleep
 
 import pytest
 
-from pyrate_limiter import (
+from pyrate_limiter_concord import (
     Duration,
     FileLockSQLiteBucket,
     Limiter,

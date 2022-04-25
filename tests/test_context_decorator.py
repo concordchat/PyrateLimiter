@@ -9,7 +9,7 @@ from uuid import uuid4
 
 import pytest
 
-from pyrate_limiter import BucketFullException, Duration, Limiter, RequestRate
+from pyrate_limiter_concord import BucketFullException, Duration, Limiter, RequestRate
 
 
 def test_ratelimit__synchronous(time_function):

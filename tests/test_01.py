@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from pyrate_limiter import (
+from pyrate_limiter_concord import (
     BucketFullException,
     Duration,
     ImmutableClassProperty,

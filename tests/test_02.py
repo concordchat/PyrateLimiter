@@ -4,7 +4,7 @@ from time import sleep
 import pytest
 from fakeredis import FakeStrictRedis
 
-from pyrate_limiter import (
+from pyrate_limiter_concord import (
     BucketFullException,
     Duration,
     Limiter,

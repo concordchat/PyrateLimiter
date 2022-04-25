@@ -4,7 +4,7 @@ from time import time
 
 import pytest
 
-from pyrate_limiter import SQLiteBucket
+from pyrate_limiter_concord import SQLiteBucket
 
 
 def get_test_bucket():
