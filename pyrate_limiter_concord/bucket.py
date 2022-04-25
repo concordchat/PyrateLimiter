@@ -49,16 +49,16 @@ class AbstractBucket(ABC):
     def flush(self) -> None:
         """Flush/reset bucket"""
 
-    def inspect_expired_items(self, time: float) -> Tuple[int, float]:
+    async def inspect_expired_items(self, time: float) -> Tuple[int, float]:
         """Find how many items in bucket that have slipped out of the time-window
 
         Returns:
             The number of unexpired items, and the time until the next item will expire
         """
-        volume = self.size()
+        volume = await self.size()
         item_count, remaining_time = 0, 0.0
 
-        for log_idx, log_item in enumerate(self.all_items()):
+        for log_idx, log_item in enumerate(await self.all_items()):
             if log_item > time:
                 item_count = volume - log_idx
                 remaining_time = log_item - time

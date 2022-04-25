@@ -88,7 +88,7 @@ class Limiter:
                 continue
 
             # Determine rate's starting point, and check requests made during its time window
-            item_count, remaining_time = bucket.inspect_expired_items(now - rate.interval)
+            item_count, remaining_time = await bucket.inspect_expired_items(now - rate.interval)
             if item_count >= rate.limit:
                 await self._release_buckets(client_ip)
                 raise BucketFullException(item_id, rate, remaining_time)
